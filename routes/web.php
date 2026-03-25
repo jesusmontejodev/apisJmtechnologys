@@ -32,8 +32,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/projects', [ProjectsWebController::class, 'store'])->name('projects.store');
     Route::get('/projects/{slug}', [ProjectsWebController::class, 'show'])->name('projects.show');
     Route::get('/projects/{slug}/edit', [ProjectsWebController::class, 'edit'])->name('projects.edit');
-    Route::post('/projects/{slug}', [ProjectsWebController::class, 'update'])->name('projects.update');
-    Route::post('/projects/{slug}/delete', [ProjectsWebController::class, 'destroy'])->name('projects.destroy');
+    Route::put('/projects/{slug}', [ProjectsWebController::class, 'update'])->name('projects.update');
+    Route::delete('/projects/{slug}', [ProjectsWebController::class, 'destroy'])->name('projects.destroy');
     Route::get('/projects/{slug}/stats', [ProjectsWebController::class, 'stats'])->name('projects.stats');
 });
 
