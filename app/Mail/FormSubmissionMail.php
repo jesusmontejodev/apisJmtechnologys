@@ -27,6 +27,7 @@ class FormSubmissionMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: config('mail.from.address'),
             to: [$this->project->destination_email],
             subject: $this->project->email_subject ?? "Nuevo mensaje del formulario",
         );

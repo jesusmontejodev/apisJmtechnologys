@@ -136,7 +136,8 @@ class ProxyController extends Controller
 
             // Send email synchronously (not queued)
             try {
-                Mail::send(new FormSubmissionMail($project, $payload));
+                Mail::to($project->destination_email)
+                    ->send(new FormSubmissionMail($project, $payload));
                 
                 $contact->update([
                     'status' => 'sent',
@@ -154,7 +155,9 @@ class ProxyController extends Controller
                 logger()->error('Failed to send form email', [
                     'contact_id' => $contact->id,
                     'project_id' => $project->id,
+                    'destination_email' => $project->destination_email,
                     'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
 
