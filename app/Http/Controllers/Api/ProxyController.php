@@ -68,7 +68,7 @@ class ProxyController extends Controller
         }
 
         // 4. Validate reCAPTCHA with Google
-        $recaptcha = new ReCaptcha(decrypt($project->recaptcha_secret_key));
+        $recaptcha = new ReCaptcha($project->recaptcha_secret_key);
         $resp = $recaptcha->verify($recaptchaToken, $request->ip());
 
         $recaptchaScore = null;
