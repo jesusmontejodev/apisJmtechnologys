@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Jobs\SendFormEmailJob;
+use App\Mail\FormSubmissionMail;
+use App\Models\Contact;
 use App\Models\Project;
 use App\Models\SubmissionLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use ReCaptcha\ReCaptcha;
 use App\Http\Controllers\Controller;
 
@@ -97,8 +100,9 @@ class ProxyController extends Controller
         $payload = $request->except('recaptcha_token');
         $payloadHash = hash('sha256', json_encode($payload));
 
-        // 6. Create submission log and dispatch email job
+        // 6. Create contact and send email
         try {
+            // Create submission log for audit
             $submissionLog = $this->logSubmission(
                 $project,
                 $request,
@@ -108,15 +112,58 @@ class ProxyController extends Controller
                 $payloadHash
             );
 
-            // Dispatch email sending job to queue
-            SendFormEmailJob::dispatch($submissionLog, $payload);
+            // Extract common fields - try various field names for email/name
+            $contactName = $payload['name'] ?? $payload['nombre'] ?? $payload['full_name'] ?? 'Anonymous';
+            $contactEmail = $payload['email'] ?? $payload['correo'] ?? null;
+            $contactPhone = $payload['phone'] ?? $payload['teléfono'] ?? $payload['tel'] ?? null;
+            $contactSubject = $payload['subject'] ?? $payload['asunto'] ?? $payload['tema'] ?? 'Form Submission';
+            $contactMessage = $payload['message'] ?? $payload['mensaje'] ?? $payload['descripcion'] ?? '';
+
+            // Create contact record
+            $contact = Contact::create([
+                'project_id' => $project->id,
+                'name' => $contactName,
+                'email' => $contactEmail,
+                'phone' => $contactPhone,
+                'subject' => $contactSubject,
+                'message' => $contactMessage,
+                'form_data' => $payload,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->header('user-agent'),
+                'recaptcha_score' => $recaptchaScore,
+                'status' => 'received',
+            ]);
+
+            // Send email synchronously (not queued)
+            try {
+                Mail::send(new FormSubmissionMail($project, $payload));
+                
+                $contact->update([
+                    'status' => 'sent',
+                    'email_sent_at' => now(),
+                ]);
+
+                // Mark submission log as email sent
+                $submissionLog->update(['email_sent' => true]);
+            } catch (\Throwable $e) {
+                $contact->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
+                ]);
+                
+                logger()->error('Failed to send form email', [
+                    'contact_id' => $contact->id,
+                    'project_id' => $project->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Increment API calls count
             $project->user->increment('api_calls_count');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Form submission received and queued for delivery',
+                'message' => 'Form submission received',
                 'data' => null
             ], 200);
         } catch (\Exception $e) {
