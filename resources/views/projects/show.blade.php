@@ -89,7 +89,7 @@ document.getElementById('contactForm').addEventListener('submit', async (e) =&gt
   const data = Object.fromEntries(formData);
   data.recaptcha_token = token;
   
-  const response = await fetch('/api/submit/{{ $project->project_token }}', {
+  const response = await fetch('{{ config("app.url") }}/api/submit/{{ $project->project_token }}', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
