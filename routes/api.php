@@ -16,8 +16,8 @@ Route::post('/submit/{project_token}', [ProxyController::class, 'submit'])
 
 // Auth routes with stricter rate limiting
 Route::middleware('throttle:10,1')->group(function () {
-    Route::post('/auth/register', [AuthController::class, 'register'])->name('register');
-    Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/auth/register', [AuthController::class, 'register'])->name('api.register');
+    Route::post('/auth/login', [AuthController::class, 'login'])->name('api.login');
 });
 
 // Protected routes (require auth via Sanctum)
