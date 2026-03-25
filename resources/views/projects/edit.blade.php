@@ -117,7 +117,7 @@
                                 <small class="d-block text-muted mt-2">
                                     ✓ Incluye https:// o http://<br>
                                     ✓ Ejemplos: https://ejemplo.com, https://www.ejemplo.com<br>
-                                    ✓ Deja vacío para permitir todos los dominios
+                                    ⚠️ <strong>Al menos 1 dominio es obligatorio</strong> - Sin configurar, los formularios serán bloqueados por CORS
                                 </small>
                             </div>
                         </div>
@@ -196,7 +196,7 @@
                         if (origins.length === 0 && !existingMessage) {
                             const p = document.createElement('p');
                             p.className = 'text-muted mb-2';
-                            p.textContent = 'No hay dominios configurados. Los formularios funcionarán en cualquier dominio.';
+                            p.textContent = '⚠️ Sin dominios configurados, el formulario será bloqueado por CORS.';
                             listDiv.appendChild(p);
                         } else if (origins.length > 0 && existingMessage) {
                             existingMessage.remove();
@@ -258,7 +258,7 @@
             <div class="card-body small">
                 <p><strong>reCAPTCHA v2:</strong> Los usuarios ven un checkbox. Más visible pero requiere interacción.</p>
                 <p><strong>reCAPTCHA v3:</strong> Sin interacción visible. La puntuación indica probabilidad (0-1).</p>
-                <p><strong>Orígenes:</strong> Solo estos dominios podrán usar tu proyecto. Déjalo vacío para permitir todos.</p>
+                <p><strong>Dominios Permitidos:</strong> <span class="badge bg-warning text-dark">Obligatorio</span> Solo estos dominios podrán usar tu proyecto. Al menos 1 dominio es requerido por seguridad.</p>
                 <hr>
                 <p class="mb-0"><a href="https://www.google.com/recaptcha/admin" target="_blank">Gestionar claves</a> en Google reCAPTCHA</p>
             </div>

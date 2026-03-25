@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Project;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class HandleCorsPreFlight
@@ -25,27 +26,49 @@ class HandleCorsPreFlight
         $origin = $request->header('origin') ?? $request->header('referer');
 
         // Find project and get allowed origins
-        $allowedOrigins = ['*']; // Default: allow all
+        $project = Project::where('project_token', $projectToken)
+            ->where('is_active', true)
+            ->first();
 
-        if ($projectToken) {
-            $project = Project::where('project_token', $projectToken)->where('is_active', true)->first();
-            
-            if ($project && $project->allowed_origins && is_array($project->allowed_origins) && !empty($project->allowed_origins)) {
-                $allowedOrigins = $project->allowed_origins;
+        // SECURITY: Require explicit allowed_origins configuration
+        // No wildcard default - must be configured by project owner
+        if (!$project || !$project->allowed_origins || !is_array($project->allowed_origins) || empty($project->allowed_origins)) {
+            if (!$project) {
+                Log::warning('CORS: Project not found', ['token' => $projectToken, 'origin' => $origin, 'ip' => $request->ip()]);
             }
+            
+            // Deny preflight
+            if ($request->isMethod('OPTIONS')) {
+                return response('CORS policy: Project not configured', 403);
+            }
+            return $next($request);
         }
 
-        // Check if origin is allowed
-        $originAllowed = in_array('*', $allowedOrigins) || in_array($origin, $allowedOrigins);
+        $allowedOrigins = $project->allowed_origins;
+
+        // Check if origin is allowed (with proper URL validation)
+        $originAllowed = $this->isOriginAllowed($origin, $allowedOrigins);
+
+        // Log CORS violations for security monitoring
+        if (!$originAllowed) {
+            Log::warning('CORS policy violation', [
+                'origin' => $origin,
+                'project_token' => $projectToken,
+                'allowed_origins' => $allowedOrigins,
+                'ip' => $request->ip(),
+                'user_agent' => $request->header('user-agent')
+            ]);
+        }
 
         // Handle preflight OPTIONS request
         if ($request->isMethod('OPTIONS')) {
             if ($originAllowed) {
                 return response('', 200)
-                    ->header('Access-Control-Allow-Origin', $origin ?? '*')
+                    ->header('Access-Control-Allow-Origin', $origin)
                     ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
                     ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-                    ->header('Access-Control-Max-Age', '3600');
+                    ->header('Access-Control-Max-Age', '3600')
+                    ->header('Access-Control-Allow-Credentials', 'true');
             }
             
             // Deny preflight if origin not allowed
@@ -56,7 +79,7 @@ class HandleCorsPreFlight
         $response = $next($request);
 
         if ($originAllowed) {
-            $response->header('Access-Control-Allow-Origin', $origin ?? '*')
+            $response->header('Access-Control-Allow-Origin', $origin)
                      ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
                      ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
                      ->header('Access-Control-Allow-Credentials', 'true');
@@ -64,4 +87,47 @@ class HandleCorsPreFlight
 
         return $response;
     }
+
+    /**
+     * Validate origin against allowed origins with proper URL parsing
+     * 
+     * SECURITY: Prevents subdomain spoofing like:
+     * - allowed: https://empor.mx
+     * - attack: https://empor.mx.attacker.com ← Should fail
+     */
+    private function isOriginAllowed(string $origin, array $allowedOrigins): bool
+    {
+        if (empty($origin)) {
+            return false;
+        }
+
+        $originUrl = parse_url($origin);
+        if (!$originUrl || !isset($originUrl['host']) || !isset($originUrl['scheme'])) {
+            return false;
+        }
+
+        foreach ($allowedOrigins as $allowed) {
+            $allowedUrl = parse_url($allowed);
+            
+            if (!$allowedUrl || !isset($allowedUrl['host']) || !isset($allowedUrl['scheme'])) {
+                continue;
+            }
+
+            // Compare scheme and host exactly
+            if ($allowedUrl['scheme'] === $originUrl['scheme'] && 
+                $allowedUrl['host'] === $originUrl['host']) {
+                
+                // Validate port if specified
+                $allowedPort = $allowedUrl['port'] ?? null;
+                $originPort = $originUrl['port'] ?? null;
+                
+                if ($allowedPort === $originPort) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }
+

@@ -54,10 +54,10 @@
                                 $origins = is_array($project->allowed_origins) ? $project->allowed_origins : json_decode($project->allowed_origins, true) ?? [];
                             @endphp
                             @if(empty($origins))
-                                <span class="badge bg-info">Todos los dominios</span>
+                                <span class="badge bg-warning">⚠️ No configurado (bloquea CORS)</span>
                             @else
                                 @foreach($origins as $origin)
-                                    <span class="badge bg-primary">{{ $origin }}</span>
+                                    <span class="badge bg-primary">{{ htmlspecialchars($origin, ENT_QUOTES, 'UTF-8') }}</span>
                                 @endforeach
                             @endif
                         </td>
