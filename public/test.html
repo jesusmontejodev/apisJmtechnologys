@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API - SaaS Proxy Anti-Spam</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #333; border-bottom: 3px solid #007bff; padding-bottom: 10px; }
+        .test-section { margin: 20px 0; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #0056b3; }
+        textarea {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test API - SaaS Proxy Anti-Spam</h1>
+
+    <div class="container">
+        <h2>✅ 1. Test de Registro</h2>
+        <div class="test-section">
+            <button onclick="testRegister()">Ejecutar Registro</button>
+            <textarea id="registerResult" placeholder="Resultado aquí..."></textarea>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔑 2. Test de Login</h2>
+        <div class="test-section">
+            <button onclick="testLogin()">Ejecutar Login</button>
+            <textarea id="loginResult" placeholder="Resultado aquí..."></textarea>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 3. Test de Proyectos</h2>
+        <div class="test-section">
+            <button onclick="testProjects()">Listar Proyectos</button>
+            <textarea id="projectsResult" placeholder="Resultado aquí..."></textarea>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Estado del Servidor</h2>
+        <p id="status">Comprobando...</p>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        // Verificar salud del servidor
+        fetch('/up')
+            .then(r => document.getElementById('status').innerHTML = `<span class="success">✅ Servidor activo</span>`)
+            .catch(() => document.getElementById('status').innerHTML = `<span class="error">❌ Servidor no disponible</span>`);
+
+        async function testRegister() {
+            const email = `test_${Date.now()}@example.com`;
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: 'Test User',
+                    email: email,
+                    password: 'password123',
+                    password_confirmation: 'password123'
+                })
+            });
+            const data = await res.json();
+            authToken = data.data?.token;
+            document.getElementById('registerResult').value = JSON.stringify(data, null, 2);
+        }
+
+        async function testLogin() {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: 'test@example.com',
+                    password: 'password123'
+                })
+            });
+            const data = await res.json();
+            if (data.data?.token) authToken = data.data.token;
+            document.getElementById('loginResult').value = JSON.stringify(data, null, 2);
+        }
+
+        async function testProjects() {
+            if (!authToken) {
+                alert('Primero ejecuta Login para obtener token');
+                return;
+            }
+            const res = await fetch('/api/projects', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await res.json();
+            document.getElementById('projectsResult').value = JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
