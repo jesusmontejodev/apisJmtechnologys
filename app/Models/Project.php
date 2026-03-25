@@ -23,6 +23,7 @@ class Project extends Model
         'is_active',
         'destination_email',
         'email_subject',
+        'email_template',
     ];
 
     protected $casts = [

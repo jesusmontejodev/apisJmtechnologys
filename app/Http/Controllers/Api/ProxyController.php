@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Jobs\SendFormEmailJob;
 use App\Mail\FormSubmissionMail;
+use App\Mail\LeadSubmissionMail;
 use App\Models\Contact;
 use App\Models\Project;
 use App\Models\SubmissionLog;
@@ -145,11 +146,20 @@ class ProxyController extends Controller
                     'contact_id' => $contact->id,
                     'project_id' => $project->id,
                     'destination_email' => $project->destination_email,
+                    'email_template' => $project->email_template ?? 'form',
                     'from_address' => config('mail.from.address'),
                 ]);
 
-                Mail::to($project->destination_email)
-                    ->send(new FormSubmissionMail($project, $payload));
+                // Choose email template based on project configuration
+                $emailTemplate = $project->email_template ?? 'form';
+                
+                if ($emailTemplate === 'lead') {
+                    Mail::to($project->destination_email)
+                        ->send(new LeadSubmissionMail($project, $payload));
+                } else {
+                    Mail::to($project->destination_email)
+                        ->send(new FormSubmissionMail($project, $payload));
+                }
                 
                 $contact->update([
                     'status' => 'sent',
@@ -162,6 +172,7 @@ class ProxyController extends Controller
                 logger()->info('Form email sent successfully', [
                     'contact_id' => $contact->id,
                     'destination_email' => $project->destination_email,
+                    'template' => $emailTemplate,
                 ]);
             } catch (\Throwable $e) {
                 logger()->error('Failed to send form email', [

@@ -75,6 +75,29 @@ class ProjectResource extends Resource
                 Forms\Components\Toggle::make('is_active')
                     ->required()
                     ->default(true),
+                
+                Forms\Components\Section::make('Email Configuration')
+                    ->schema([
+                        Forms\Components\TextInput::make('destination_email')
+                            ->label('Destination Email')
+                            ->email()
+                            ->required()
+                            ->helperText('Where form submissions will be sent'),
+                            
+                        Forms\Components\TextInput::make('email_subject')
+                            ->label('Email Subject')
+                            ->default('Nuevo mensaje del formulario')
+                            ->helperText('Subject line for form submission emails'),
+                            
+                        Forms\Components\Select::make('email_template')
+                            ->label('Email Template')
+                            ->options([
+                                'form' => 'Form Submission (Detailed)',
+                                'lead' => 'Lead Capture (Simple)',
+                            ])
+                            ->default('form')
+                            ->helperText('Choose the email template style'),
+                    ]),
             ]);
     }
 
