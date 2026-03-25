@@ -24,45 +24,84 @@ class ContactResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Información del Contacto')
+                Forms\Components\Section::make('📊 Información del Contacto')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Nombre')
-                            ->disabled(),
-                        Forms\Components\TextInput::make('email')
-                            ->label('Email')
-                            ->disabled(),
-                        Forms\Components\TextInput::make('phone')
-                            ->label('Teléfono')
-                            ->disabled(),
-                        Forms\Components\TextInput::make('subject')
-                            ->label('Asunto')
-                            ->disabled(),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('name')
+                                    ->label('👤 Nombre')
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('email')
+                                    ->label('📧 Email')
+                                    ->disabled()
+                                    ->copyable(),
+                            ]),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('phone')
+                                    ->label('📱 Teléfono')
+                                    ->disabled()
+                                    ->copyable(),
+                                Forms\Components\TextInput::make('subject')
+                                    ->label('📝 Asunto')
+                                    ->disabled(),
+                            ]),
                         Forms\Components\Textarea::make('message')
-                            ->label('Mensaje')
-                            ->disabled(),
-                    ])->columns(2),
-                Forms\Components\Section::make('Datos Técnicos')
+                            ->label('💬 Mensaje')
+                            ->disabled()
+                            ->autosize(),
+                    ]),
+
+                Forms\Components\Section::make('🔧 Información Técnica')
                     ->schema([
-                        Forms\Components\TextInput::make('ip_address')
-                            ->label('IP Address')
-                            ->disabled(),
-                        Forms\Components\TextInput::make('recaptcha_score')
-                            ->label('reCAPTCHA Score')
-                            ->disabled(),
-                        Forms\Components\Select::make('status')
-                            ->label('Estado')
-                            ->options([
-                                'received' => 'Recibido',
-                                'processing' => 'Procesando',
-                                'sent' => 'Enviado',
-                                'failed' => 'Fallido',
-                            ])
-                            ->disabled(),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('ip_address')
+                                    ->label('IP Address')
+                                    ->disabled()
+                                    ->copyable(),
+                                Forms\Components\TextInput::make('recaptcha_score')
+                                    ->label('reCAPTCHA Score')
+                                    ->disabled(),
+                            ]),
+                        Forms\Components\Textarea::make('user_agent')
+                            ->label('User Agent')
+                            ->disabled()
+                            ->autosize(),
+                    ]),
+
+                Forms\Components\Section::make('📋 Estado del Envío')
+                    ->schema([
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('status')
+                                    ->label('Estado')
+                                    ->options([
+                                        'received' => 'Recibido',
+                                        'processing' => 'Procesando',
+                                        'sent' => 'Enviado',
+                                        'failed' => 'Fallido',
+                                    ])
+                                    ->disabled(),
+                                Forms\Components\TextInput::make('email_sent_at')
+                                    ->label('Email Enviado')
+                                    ->disabled(),
+                            ]),
                         Forms\Components\Textarea::make('error_message')
                             ->label('Mensaje de Error')
-                            ->disabled(),
-                    ])->columns(2),
+                            ->disabled()
+                            ->autosize()
+                            ->hidden(fn ($get) => !$get('error_message')),
+                    ]),
+
+                Forms\Components\Section::make('📊 Datos Completos del Formulario')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\View::make('components.contact-json-display')
+                            ->viewData([
+                                'data' => fn ($record) => $record?->form_data ?? [],
+                            ]),
+                    ]),
             ]);
     }
 
@@ -72,22 +111,31 @@ class ContactResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('project.name')
                     ->label('Proyecto')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nombre')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
-                    ->searchable(),
+                    ->searchable()
+                    ->copyable(),
                 Tables\Columns\TextColumn::make('phone')
-                    ->label('Teléfono'),
+                    ->label('Teléfono')
+                    ->searchable()
+                    ->copyable(),
                 Tables\Columns\TextColumn::make('subject')
                     ->label('Asunto')
-                    ->searchable(),
+                    ->searchable()
+                    ->limit(30),
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Estado')
                     ->colors([
@@ -103,10 +151,15 @@ class ContactResource extends Resource
                         'failed' => 'Fallido',
                         default => $state,
                     }),
+                Tables\Columns\IconColumn::make('email_sent_at')
+                    ->label('Email Enviado')
+                    ->icon(fn ($state) => $state ? 'heroicon-o-check-circle' : 'heroicon-o-clock')
+                    ->color(fn ($state) => $state ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Recibido')
                     ->dateTime('d/m/Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
