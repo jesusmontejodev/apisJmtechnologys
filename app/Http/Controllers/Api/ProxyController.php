@@ -136,6 +136,18 @@ class ProxyController extends Controller
 
             // Send email synchronously (not queued)
             try {
+                // Validate destination email exists
+                if (!$project->destination_email) {
+                    throw new \Exception('Project destination_email is not configured');
+                }
+
+                logger()->info('Sending form email', [
+                    'contact_id' => $contact->id,
+                    'project_id' => $project->id,
+                    'destination_email' => $project->destination_email,
+                    'from_address' => config('mail.from.address'),
+                ]);
+
                 Mail::to($project->destination_email)
                     ->send(new FormSubmissionMail($project, $payload));
                 
@@ -146,18 +158,24 @@ class ProxyController extends Controller
 
                 // Mark submission log as email sent
                 $submissionLog->update(['email_sent' => true]);
-            } catch (\Throwable $e) {
-                $contact->update([
-                    'status' => 'failed',
-                    'error_message' => $e->getMessage(),
+
+                logger()->info('Form email sent successfully', [
+                    'contact_id' => $contact->id,
+                    'destination_email' => $project->destination_email,
                 ]);
-                
+            } catch (\Throwable $e) {
                 logger()->error('Failed to send form email', [
                     'contact_id' => $contact->id,
                     'project_id' => $project->id,
+                    'project_name' => $project->name,
                     'destination_email' => $project->destination_email,
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
+                ]);
+
+                $contact->update([
+                    'status' => 'failed',
+                    'error_message' => $e->getMessage(),
                 ]);
             }
 
