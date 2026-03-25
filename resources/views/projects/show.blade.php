@@ -47,6 +47,21 @@
                         <td><strong>Asunto:</strong></td>
                         <td>{{ $project->email_subject }}</td>
                     </tr>
+                    <tr>
+                        <td><strong>Dominios Permitidos:</strong></td>
+                        <td>
+                            @php
+                                $origins = is_array($project->allowed_origins) ? $project->allowed_origins : json_decode($project->allowed_origins, true) ?? [];
+                            @endphp
+                            @if(empty($origins))
+                                <span class="badge bg-info">Todos los dominios</span>
+                            @else
+                                @foreach($origins as $origin)
+                                    <span class="badge bg-primary">{{ $origin }}</span>
+                                @endforeach
+                            @endif
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>
@@ -72,24 +87,28 @@
 <div class="card mb-4">
     <div class="card-header">Código para tu Frontend</div>
     <div class="card-body">
-        <pre><code>&lt;form id="contactForm"&gt;
+        <pre><code>&lt;form id="contactForm" data-site-key="{{ $project->recaptcha_site_key }}" data-api-url="{{ config('app.url') }}/api/submit/{{ $project->project_token }}"&gt;
   &lt;input name="name" placeholder="Nombre" required&gt;
   &lt;input name="email" type="email" placeholder="Email" required&gt;
   &lt;textarea name="message" placeholder="Mensaje"&gt;&lt;/textarea&gt;
   &lt;button type="submit"&gt;Enviar&lt;/button&gt;
 &lt;/form&gt;
 
-&lt;script src="https://www.google.com/recaptcha/api.js"&gt;&lt;/script&gt;
+&lt;script src="https://www.google.com/recaptcha/api.js?render={{ $project->recaptcha_site_key }}"&gt;&lt;/script&gt;
 &lt;script&gt;
 document.getElementById('contactForm').addEventListener('submit', async (e) =&gt; {
   e.preventDefault();
-  const token = await grecaptcha.execute('{{ $project->recaptcha_site_key }}', {action: 'submit'});
+  
+  const siteKey = e.target.getAttribute('data-site-key');
+  const apiUrl = e.target.getAttribute('data-api-url');
+  
+  const token = await grecaptcha.execute(siteKey, {action: 'submit'});
   
   const formData = new FormData(e.target);
   const data = Object.fromEntries(formData);
   data.recaptcha_token = token;
   
-  const response = await fetch('{{ config("app.url") }}/api/submit/{{ $project->project_token }}', {
+  const response = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)

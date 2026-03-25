@@ -85,15 +85,138 @@
                         <small class="text-muted">Entre 0 y 1. Valores más altos = más estricto (0.5 es default)</small>
                     </div>
 
-                    <!-- Orígenes Permitidos -->
+                    <!-- Orígenes Permitidos - Dynamic Manager -->
                     <div class="mb-3">
-                        <label for="allowed_origins" class="form-label">Orígenes Permitidos</label>
-                        <textarea class="form-control @error('allowed_origins') is-invalid @enderror" id="allowed_origins" name="allowed_origins" rows="4" placeholder="https://ejemplo.com&#10;https://www.ejemplo.com&#10;https://blog.ejemplo.com">{{ old('allowed_origins', is_array($project->allowed_origins) ? implode("\n", $project->allowed_origins) : implode("\n", json_decode($project->allowed_origins, true) ?? [])) }}</textarea>
-                        <small class="text-muted">Un origen por línea (ej: https://ejemplo.com)</small>
+                        <label class="form-label"><i class="bi bi-globe"></i> Dominios Permitidos (CORS)</label>
+                        
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <div id="origins-list" class="mb-3">
+                                    @php
+                                        $originsArray = is_array($project->allowed_origins) ? $project->allowed_origins : json_decode($project->allowed_origins, true) ?? [];
+                                    @endphp
+                                    @forelse($originsArray as $origin)
+                                        <div class="input-group mb-2 origin-item">
+                                            <input type="text" class="form-control origin-input" value="{{ $origin }}" readonly>
+                                            <button class="btn btn-outline-danger" type="button" onclick="removeOrigin(this)">
+                                                <i class="bi bi-trash"></i> Remover
+                                            </button>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted mb-2">No hay dominios configurados. Los formularios funcionar en cualquier dominio.</p>
+                                    @endforelse
+                                </div>
+
+                                <div class="input-group">
+                                    <input type="text" id="new-origin" class="form-control" placeholder="https://ejemplo.com" 
+                                           pattern="https?://.*" title="Debe comenzar con http:// o https://">
+                                    <button class="btn btn-success" type="button" onclick="addOrigin()">
+                                        <i class="bi bi-plus-circle"></i> Agregar Dominio
+                                    </button>
+                                </div>
+                                <small class="d-block text-muted mt-2">
+                                    ✓ Incluye https:// o http://<br>
+                                    ✓ Ejemplos: https://ejemplo.com, https://www.ejemplo.com<br>
+                                    ✓ Deja vacío para permitir todos los dominios
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Hidden textarea for form submission -->
+                        <textarea class="d-none" id="allowed_origins" name="allowed_origins"></textarea>
                         @error('allowed_origins')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                            <div class="alert alert-danger">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        updateOriginsList();
+                    });
+
+                    function addOrigin() {
+                        const input = document.getElementById('new-origin');
+                        const origin = input.value.trim();
+
+                        if (!origin) {
+                            alert('Por favor ingresa un dominio');
+                            return;
+                        }
+
+                        // Validación de URL
+                        if (!origin.match(/^https?:\/\/.+/)) {
+                            alert('El dominio debe comenzar con http:// o https://');
+                            return;
+                        }
+
+                        // Validación de duplicados
+                        const existing = getOriginsList();
+                        if (existing.includes(origin)) {
+                            alert('Este dominio ya está agregado');
+                            input.focus();
+                            return;
+                        }
+
+                        // Agregar a la lista
+                        const listElement = document.getElementById('origins-list');
+                        const item = document.createElement('div');
+                        item.className = 'input-group mb-2 origin-item';
+                        item.innerHTML = `
+                            <input type="text" class="form-control origin-input" value="${escapeHtml(origin)}" readonly>
+                            <button class="btn btn-outline-danger" type="button" onclick="removeOrigin(this)">
+                                <i class="bi bi-trash"></i> Remover
+                            </button>
+                        `;
+                        listElement.appendChild(item);
+
+                        input.value = '';
+                        input.focus();
+                        updateOriginsList();
+                    }
+
+                    function removeOrigin(button) {
+                        button.closest('.origin-item').remove();
+                        updateOriginsList();
+                    }
+
+                    function getOriginsList() {
+                        const items = document.querySelectorAll('.origin-item .origin-input');
+                        return Array.from(items).map(item => item.value);
+                    }
+
+                    function updateOriginsList() {
+                        const origins = getOriginsList();
+                        const textarea = document.getElementById('allowed_origins');
+                        textarea.value = origins.join('\n');
+
+                        // Update empty message
+                        const listDiv = document.getElementById('origins-list');
+                        const existingMessage = listDiv.querySelector('.text-muted');
+                        
+                        if (origins.length === 0 && !existingMessage) {
+                            const p = document.createElement('p');
+                            p.className = 'text-muted mb-2';
+                            p.textContent = 'No hay dominios configurados. Los formularios funcionarán en cualquier dominio.';
+                            listDiv.appendChild(p);
+                        } else if (origins.length > 0 && existingMessage) {
+                            existingMessage.remove();
+                        }
+                    }
+
+                    function escapeHtml(text) {
+                        const div = document.createElement('div');
+                        div.textContent = text;
+                        return div.innerHTML;
+                    }
+
+                    // Permitir agregar presionando Enter
+                    document.getElementById('new-origin')?.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addOrigin();
+                        }
+                    });
+                    </script>
 
                     <!-- Estado Activo -->
                     <div class="mb-3 form-check">

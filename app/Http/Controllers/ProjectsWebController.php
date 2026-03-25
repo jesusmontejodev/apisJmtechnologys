@@ -107,12 +107,20 @@ class ProjectsWebController extends Controller
         ]);
 
         if (isset($validated['allowed_origins'])) {
-            $validated['allowed_origins'] = array_filter(
-                array_map(
-                    'trim',
-                    explode("\n", $validated['allowed_origins'])
-                )
+            // Split by newline and clean
+            $origins = array_filter(
+                array_map('trim', explode("\n", $validated['allowed_origins']))
             );
+
+            // Validate each origin
+            $validOrigins = [];
+            foreach ($origins as $origin) {
+                if (filter_var($origin, FILTER_VALIDATE_URL)) {
+                    $validOrigins[] = $origin;
+                }
+            }
+
+            $validated['allowed_origins'] = $validOrigins;
         }
 
         $project->update($validated);
