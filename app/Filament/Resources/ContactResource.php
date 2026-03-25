@@ -109,57 +109,85 @@ class ContactResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('project.name')
-                    ->label('Proyecto')
-                    ->sortable()
-                    ->searchable()
-                    ->badge()
-                    ->color('info'),
-                Tables\Columns\TextColumn::make('name')
-                    ->label('Nombre')
-                    ->searchable()
-                    ->sortable()
-                    ->weight('bold'),
-                Tables\Columns\TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable()
-                    ->copyable(),
-                Tables\Columns\TextColumn::make('phone')
-                    ->label('Teléfono')
-                    ->searchable()
-                    ->copyable(),
-                Tables\Columns\TextColumn::make('subject')
-                    ->label('Asunto')
-                    ->searchable()
-                    ->limit(30),
-                Tables\Columns\BadgeColumn::make('status')
-                    ->label('Estado')
-                    ->colors([
-                        'warning' => 'received',
-                        'info' => 'processing',
-                        'success' => 'sent',
-                        'danger' => 'failed',
-                    ])
-                    ->formatStateUsing(fn(string $state): string => match($state) {
-                        'received' => 'Recibido',
-                        'processing' => 'Procesando',
-                        'sent' => 'Enviado',
-                        'failed' => 'Fallido',
-                        default => $state,
-                    }),
-                Tables\Columns\IconColumn::make('email_sent_at')
-                    ->label('Email Enviado')
-                    ->icon(fn ($state) => $state ? 'heroicon-o-check-circle' : 'heroicon-o-clock')
-                    ->color(fn ($state) => $state ? 'success' : 'warning'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Recibido')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(),
+                Tables\Columns\Layout\Stack::make([
+                    Tables\Columns\Layout\Grid::make([
+                        'md' => 3,
+                    ])->schema([
+                        Tables\Columns\TextColumn::make('name')
+                            ->label('👤 Nombre')
+                            ->searchable()
+                            ->sortable()
+                            ->weight('bold')
+                            ->size('lg'),
+                        
+                        Tables\Columns\TextColumn::make('email')
+                            ->label('📧 Email')
+                            ->searchable()
+                            ->copyable()
+                            ->icon('heroicon-m-envelope'),
+                        
+                        Tables\Columns\TextColumn::make('phone')
+                            ->label('📱 Teléfono')
+                            ->searchable()
+                            ->copyable()
+                            ->icon('heroicon-m-phone'),
+                    ]),
+
+                    Tables\Columns\Layout\Grid::make([
+                        'md' => 2,
+                    ])->schema([
+                        Tables\Columns\TextColumn::make('project.name')
+                            ->label('🏢 Proyecto')
+                            ->badge()
+                            ->color('info'),
+                        
+                        Tables\Columns\TextColumn::make('subject')
+                            ->label('📝 Asunto')
+                            ->searchable()
+                            ->limit(50),
+                    ]),
+
+                    Tables\Columns\TextColumn::make('message')
+                        ->label('💬 Mensaje')
+                        ->limit(100)
+                        ->markdown()
+                        ->wrap(),
+
+                    Tables\Columns\Layout\Grid::make([
+                        'md' => 4,
+                    ])->schema([
+                        Tables\Columns\BadgeColumn::make('status')
+                            ->label('Estado')
+                            ->colors([
+                                'warning' => 'received',
+                                'info' => 'processing',
+                                'success' => 'sent',
+                                'danger' => 'failed',
+                            ])
+                            ->formatStateUsing(fn(string $state): string => match($state) {
+                                'received' => '📥 Recibido',
+                                'processing' => '⏳ Procesando',
+                                'sent' => '✅ Enviado',
+                                'failed' => '❌ Fallido',
+                                default => $state,
+                            }),
+                        
+                        Tables\Columns\IconColumn::make('email_sent_at')
+                            ->label('Email')
+                            ->icon(fn ($state) => $state ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle')
+                            ->color(fn ($state) => $state ? 'success' : 'danger'),
+                        
+                        Tables\Columns\TextColumn::make('ip_address')
+                            ->label('🌐 IP')
+                            ->copyable()
+                            ->toggleable(isToggledHiddenByDefault: true),
+                        
+                        Tables\Columns\TextColumn::make('created_at')
+                            ->label('📅 Fecha')
+                            ->dateTime('d/m/Y H:i')
+                            ->sortable(),
+                    ]),
+                ]),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
